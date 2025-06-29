@@ -160,6 +160,64 @@
   { policy-id: uint }
 )
 
+;; Initialize common risk profiles
+(begin
+  ;; Agricultural drought insurance
+  (map-set risk-profiles 
+    { profile-id: u1 } 
+    {
+      profile-name: u"Agricultural Drought Insurance",
+      base-premium-rate: u500, ;; 5%
+      coverage-multiplier: u1000, ;; 10x
+      risk-factor: u300, ;; 3%
+      min-coverage: u10000000, ;; 100 STX
+      max-coverage: u1000000000, ;; 10,000 STX
+      description: u"Insurance for farmers against drought conditions"
+    }
+  )
+  
+  ;; Flood insurance
+  (map-set risk-profiles 
+    { profile-id: u2 } 
+    {
+      profile-name: u"Flood Insurance",
+      base-premium-rate: u750, ;; 7.5%
+      coverage-multiplier: u800, ;; 8x
+      risk-factor: u500, ;; 5%
+      min-coverage: u20000000, ;; 200 STX
+      max-coverage: u2000000000, ;; 20,000 STX
+      description: u"Insurance against flood damage"
+    }
+  )
+  
+  ;; Hurricane insurance
+  (map-set risk-profiles 
+    { profile-id: u3 } 
+    {
+      profile-name: u"Hurricane Insurance",
+      base-premium-rate: u1000, ;; 10%
+      coverage-multiplier: u600, ;; 6x
+      risk-factor: u800, ;; 8%
+      min-coverage: u50000000, ;; 500 STX
+      max-coverage: u5000000000, ;; 50,000 STX
+      description: u"Insurance against hurricane damage"
+    }
+  )
+   ;; Frost insurance for crops
+  (map-set risk-profiles 
+    { profile-id: u4 } 
+    {
+      profile-name: u"Frost Insurance",
+      base-premium-rate: u400, ;; 4%
+      coverage-multiplier: u1200, ;; 12x
+      risk-factor: u200, ;; 2%
+      min-coverage: u5000000, ;; 50 STX
+      max-coverage: u500000000, ;; 5,000 STX
+      description: u"Insurance for farmers against frost damage to crops"
+    }
+  )
+)
+
 ;; Read-only functions
 
 ;; Get policy details
@@ -189,7 +247,7 @@
 
 ;; Get latest oracle data
 (define-read-only (get-latest-oracle-data (oracle-id (string-ascii 36)))
-  (get-oracle-data oracle-id stacks-block-height)
+  (get-oracle-data oracle-id block-height)
 )
 
 ;; Calculate premium for a given risk profile and coverage amount
@@ -216,8 +274,8 @@
     policy
     (and
       (is-eq (get policy-status policy) POLICY-STATUS-ACTIVE)
-      (>= stacks-block-height (get start-block policy))
-      (<= stacks-block-height (get end-block policy))
+      (>= block-height (get start-block policy))
+      (<= block-height (get end-block policy))
     )
     false
   )
@@ -321,7 +379,7 @@
         oracle-name: oracle-name,
         oracle-type: oracle-type,
         is-active: true,
-        registration-block: stacks-block-height
+        registration-block: block-height
       }
     )
     
@@ -350,7 +408,7 @@
     
     ;; Store oracle data
     (map-set oracle-data
-      { oracle-id: oracle-id, block-height: stacks-block-height }
+      { oracle-id: oracle-id, block-height: block-height }
       {
         weather-type: weather-type,
         location: location,
@@ -400,14 +458,14 @@
         risk-profile-id: risk-profile-id,
         coverage-amount: coverage-amount,
         premium-amount: premium-result,
-        start-block: stacks-block-height,
-        end-block: (+ stacks-block-height duration-blocks),
+        start-block: block-height,
+        end-block: (+ block-height duration-blocks),
         policy-status: POLICY-STATUS-ACTIVE,
         renewal-count: u0,
         auto-renew: auto-renew,
         location: location,
-        created-at: stacks-block-height,
-        last-updated: stacks-block-height
+        created-at: block-height,
+        last-updated: block-height
       }
     )
     
@@ -530,10 +588,10 @@
           weather-event-type: (get weather-type condition),
           weather-event-value: (get value oracle-data-value),
           condition-index: u0,
-          submitted-block: stacks-block-height,
-          processed-block: (some stacks-block-height),
+          submitted-block: block-height,
+          processed-block: (some block-height),
           paid-block: none,
-          oracle-data-block: stacks-block-height
+          oracle-data-block: block-height
         }
       )
       
@@ -548,7 +606,7 @@
         { policy-id: policy-id }
         (merge policy {
           policy-status: POLICY-STATUS-CLAIMED,
-          last-updated: stacks-block-height
+          last-updated: block-height
         })
       )
       
@@ -587,7 +645,7 @@
       { claim-id: claim-id }
       (merge claim {
         claim-status: CLAIM-STATUS-PAID,
-        paid-block: (some stacks-block-height)
+        paid-block: (some block-height)
       })
     )
     
@@ -607,7 +665,7 @@
     
     ;; Check if policy has expired but wasn't claimed
     (asserts! (and 
-               (> stacks-block-height (get end-block policy))
+               (> block-height (get end-block policy))
                (not (is-eq (get policy-status policy) POLICY-STATUS-CLAIMED))
               ) 
               (err ERR-POLICY-NOT-EXPIRED))
@@ -634,11 +692,11 @@
         { policy-id: policy-id }
         (merge policy {
           premium-amount: premium-result,
-          start-block: stacks-block-height,
-          end-block: (+ stacks-block-height duration-blocks),
+          start-block: block-height,
+          end-block: (+ block-height duration-blocks),
           policy-status: POLICY-STATUS-ACTIVE,
           renewal-count: (+ (get renewal-count policy) u1),
-          last-updated: stacks-block-height
+          last-updated: block-height
         })
       )
       
@@ -665,7 +723,7 @@
       { policy-id: policy-id }
       (merge policy {
         policy-status: POLICY-STATUS-CANCELED,
-        last-updated: stacks-block-height
+        last-updated: block-height
       })
     )
     
@@ -714,57 +772,4 @@
     (var-set contract-owner new-owner)
     (ok true)
   )
-)
-
-;; Initialize common risk profiles
-(map-set risk-profiles 
-  { profile-id: u1 } 
-  {
-    profile-name: u"Agricultural Drought Insurance",
-    base-premium-rate: u500, ;; 5%
-    coverage-multiplier: u1000, ;; 10x
-    risk-factor: u300, ;; 3%
-    min-coverage: u10000000, ;; 100 STX
-    max-coverage: u1000000000, ;; 10,000 STX
-    description: u"Insurance for farmers against drought conditions"
-  }
-)
-
-(map-set risk-profiles 
-  { profile-id: u2 } 
-  {
-    profile-name: u"Flood Insurance",
-    base-premium-rate: u750, ;; 7.5%
-    coverage-multiplier: u800, ;; 8x
-    risk-factor: u500, ;; 5%
-    min-coverage: u20000000, ;; 200 STX
-    max-coverage: u2000000000, ;; 20,000 STX
-    description: u"Insurance against flood damage"
-  }
-)
-
-(map-set risk-profiles 
-  { profile-id: u3 } 
-  {
-    profile-name: u"Hurricane Insurance",
-    base-premium-rate: u1000, ;; 10%
-    coverage-multiplier: u600, ;; 6x
-    risk-factor: u800, ;; 8%
-    min-coverage: u50000000, ;; 500 STX
-    max-coverage: u5000000000, ;; 50,000 STX
-    description: u"Insurance against hurricane damage"
-  }
-)
-
-(map-set risk-profiles 
-  { profile-id: u4 } 
-  {
-    profile-name: u"Frost Insurance",
-    base-premium-rate: u400, ;; 4%
-    coverage-multiplier: u1200, ;; 12x
-    risk-factor: u200, ;; 2%
-    min-coverage: u5000000, ;; 50 STX
-    max-coverage: u500000000, ;; 5,000 STX
-    description: u"Insurance for farmers against frost damage to crops"
-  }
 )
