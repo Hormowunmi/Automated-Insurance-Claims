@@ -189,7 +189,7 @@
 
 ;; Get latest oracle data
 (define-read-only (get-latest-oracle-data (oracle-id (string-ascii 36)))
-  (get-oracle-data oracle-id stacks-block-height)
+  (get-oracle-data oracle-id block-height)
 )
 
 ;; Calculate premium for a given risk profile and coverage amount
@@ -216,8 +216,8 @@
     policy
     (and
       (is-eq (get policy-status policy) POLICY-STATUS-ACTIVE)
-      (>= stacks-block-height (get start-block policy))
-      (<= stacks-block-height (get end-block policy))
+      (>= block-height (get start-block policy))
+      (<= block-height (get end-block policy))
     )
     false
   )
