@@ -70,7 +70,7 @@
 
 ;; Maps for oracle data
 (define-map oracle-data
-  { oracle-id: (string-ascii 36), block-height: uint }
+  { oracle-id: (string-ascii 36), data-block-height: uint }
   {
     weather-type: uint,
     location: (string-utf8 100),
@@ -183,13 +183,13 @@
 )
 
 ;; Get oracle data
-(define-read-only (get-oracle-data (oracle-id (string-ascii 36)) (block-height uint))
-  (map-get? oracle-data { oracle-id: oracle-id, block-height: block-height })
+(define-read-only (get-oracle-data (oracle-id (string-ascii 36)) (data-block-height uint))
+  (map-get? oracle-data { oracle-id: oracle-id, data-block-height: data-block-height })
 )
 
 ;; Get latest oracle data
 (define-read-only (get-latest-oracle-data (oracle-id (string-ascii 36)))
-  (get-oracle-data oracle-id block-height)
+  (get-oracle-data oracle-id burn-block-height)
 )
 
 ;; Calculate premium for a given risk profile and coverage amount
@@ -216,8 +216,8 @@
     policy
     (and
       (is-eq (get policy-status policy) POLICY-STATUS-ACTIVE)
-      (>= block-height (get start-block policy))
-      (<= block-height (get end-block policy))
+      (>= burn-block-height (get start-block policy))
+      (<= burn-block-height (get end-block policy))
     )
     false
   )
@@ -321,7 +321,7 @@
         oracle-name: oracle-name,
         oracle-type: oracle-type,
         is-active: true,
-        registration-block: stacks-block-height
+        registration-block: burn-block-height
       }
     )
     
@@ -350,7 +350,7 @@
     
     ;; Store oracle data
     (map-set oracle-data
-      { oracle-id: oracle-id, block-height: stacks-block-height }
+      { oracle-id: oracle-id, data-block-height: burn-block-height }
       {
         weather-type: weather-type,
         location: location,
@@ -400,14 +400,14 @@
         risk-profile-id: risk-profile-id,
         coverage-amount: coverage-amount,
         premium-amount: premium-result,
-        start-block: stacks-block-height,
-        end-block: (+ stacks-block-height duration-blocks),
+        start-block: burn-block-height,
+        end-block: (+ burn-block-height duration-blocks),
         policy-status: POLICY-STATUS-ACTIVE,
         renewal-count: u0,
         auto-renew: auto-renew,
         location: location,
-        created-at: stacks-block-height,
-        last-updated: stacks-block-height
+        created-at: burn-block-height,
+        last-updated: burn-block-height
       }
     )
     
@@ -530,10 +530,10 @@
           weather-event-type: (get weather-type condition),
           weather-event-value: (get value oracle-data-value),
           condition-index: u0,
-          submitted-block: stacks-block-height,
-          processed-block: (some stacks-block-height),
+          submitted-block: burn-block-height,
+          processed-block: (some burn-block-height),
           paid-block: none,
-          oracle-data-block: stacks-block-height
+          oracle-data-block: burn-block-height
         }
       )
       
@@ -548,7 +548,7 @@
         { policy-id: policy-id }
         (merge policy {
           policy-status: POLICY-STATUS-CLAIMED,
-          last-updated: stacks-block-height
+          last-updated: burn-block-height
         })
       )
       
@@ -587,7 +587,7 @@
       { claim-id: claim-id }
       (merge claim {
         claim-status: CLAIM-STATUS-PAID,
-        paid-block: (some stacks-block-height)
+        paid-block: (some burn-block-height)
       })
     )
     
@@ -607,7 +607,7 @@
     
     ;; Check if policy has expired but wasn't claimed
     (asserts! (and 
-               (> stacks-block-height (get end-block policy))
+               (> burn-block-height (get end-block policy))
                (not (is-eq (get policy-status policy) POLICY-STATUS-CLAIMED))
               ) 
               (err ERR-POLICY-NOT-EXPIRED))
@@ -634,11 +634,11 @@
         { policy-id: policy-id }
         (merge policy {
           premium-amount: premium-result,
-          start-block: stacks-block-height,
-          end-block: (+ stacks-block-height duration-blocks),
+          start-block: burn-block-height,
+          end-block: (+ burn-block-height duration-blocks),
           policy-status: POLICY-STATUS-ACTIVE,
           renewal-count: (+ (get renewal-count policy) u1),
-          last-updated: stacks-block-height
+          last-updated: burn-block-height
         })
       )
       
@@ -665,7 +665,7 @@
       { policy-id: policy-id }
       (merge policy {
         policy-status: POLICY-STATUS-CANCELED,
-        last-updated: stacks-block-height
+        last-updated: burn-block-height
       })
     )
     
