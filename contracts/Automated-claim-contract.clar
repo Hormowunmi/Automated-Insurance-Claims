@@ -18,6 +18,7 @@
 (define-constant ERR-INVALID-PARAMETERS u14)
 (define-constant ERR-NOT-CLAIMABLE-YET u15)
 (define-constant ERR-PAYMENT-FAILED u16)
+(define-constant ERR-POLICY-NOT-EXPIRED u17)
 
 ;; Constants for policy status
 (define-constant POLICY-STATUS-ACTIVE u1)
@@ -165,13 +166,13 @@
   (map-set risk-profiles 
     { profile-id: u1 } 
     {
-      profile-name: "Agricultural Drought Insurance",
+      profile-name: u"Agricultural Drought Insurance",
       base-premium-rate: u500, ;; 5%
       coverage-multiplier: u1000, ;; 10x
       risk-factor: u300, ;; 3%
       min-coverage: u10000000, ;; 100 STX
       max-coverage: u1000000000, ;; 10,000 STX
-      description: "Insurance for farmers against drought conditions"
+      description: u"Insurance for farmers against drought conditions"
     }
   )
   
@@ -179,13 +180,13 @@
   (map-set risk-profiles 
     { profile-id: u2 } 
     {
-      profile-name: "Flood Insurance",
+      profile-name: u"Flood Insurance",
       base-premium-rate: u750, ;; 7.5%
       coverage-multiplier: u800, ;; 8x
       risk-factor: u500, ;; 5%
       min-coverage: u20000000, ;; 200 STX
       max-coverage: u2000000000, ;; 20,000 STX
-      description: "Insurance against flood damage"
+      description: u"Insurance against flood damage"
     }
   )
   
@@ -193,26 +194,26 @@
   (map-set risk-profiles 
     { profile-id: u3 } 
     {
-      profile-name: "Hurricane Insurance",
+      profile-name: u"Hurricane Insurance",
       base-premium-rate: u1000, ;; 10%
       coverage-multiplier: u600, ;; 6x
       risk-factor: u800, ;; 8%
       min-coverage: u50000000, ;; 500 STX
       max-coverage: u5000000000, ;; 50,000 STX
-      description: "Insurance against hurricane damage"
+      description: u"Insurance against hurricane damage"
     }
   )
    ;; Frost insurance for crops
   (map-set risk-profiles 
     { profile-id: u4 } 
     {
-      profile-name: "Frost Insurance",
+      profile-name: u"Frost Insurance",
       base-premium-rate: u400, ;; 4%
       coverage-multiplier: u1200, ;; 12x
       risk-factor: u200, ;; 2%
       min-coverage: u5000000, ;; 50 STX
       max-coverage: u500000000, ;; 5,000 STX
-      description: "Insurance for farmers against frost damage to crops"
+      description: u"Insurance for farmers against frost damage to crops"
     }
   )
 )
@@ -325,13 +326,21 @@
 
 ;; Helper function to check condition based on operator
 (define-read-only (condition-check (operator uint) (current-value uint) (threshold uint))
-  (cond
-    ((is-eq operator OPERATOR-GREATER-THAN) (> current-value threshold))
-    ((is-eq operator OPERATOR-LESS-THAN) (< current-value threshold))
-    ((is-eq operator OPERATOR-EQUAL-TO) (is-eq current-value threshold))
-    ((is-eq operator OPERATOR-GREATER-THAN-OR-EQUAL) (>= current-value threshold))
-    ((is-eq operator OPERATOR-LESS-THAN-OR-EQUAL) (<= current-value threshold))
-    (true false)
+  (if (is-eq operator OPERATOR-GREATER-THAN)
+    (> current-value threshold)
+    (if (is-eq operator OPERATOR-LESS-THAN)
+      (< current-value threshold)
+      (if (is-eq operator OPERATOR-EQUAL-TO)
+        (is-eq current-value threshold)
+        (if (is-eq operator OPERATOR-GREATER-THAN-OR-EQUAL)
+          (>= current-value threshold)
+          (if (is-eq operator OPERATOR-LESS-THAN-OR-EQUAL)
+            (<= current-value threshold)
+            false
+          )
+        )
+      )
+    )
   )
 )
 
